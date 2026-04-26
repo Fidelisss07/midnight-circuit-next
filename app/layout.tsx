@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import IntroWrapper from '@/components/IntroWrapper';
 
 export const metadata: Metadata = {
   title: 'GearHub — A Rede Social dos Carros',
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="theme-fire">
         <div id="app-bg" />
-        {children}
+        <IntroWrapper>
+          {children}
+        </IntroWrapper>
         <div id="toast-container" />
       </body>
     </html>
