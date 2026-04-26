@@ -361,13 +361,27 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12p
 @media (max-width: 768px) {
     .app-sidebar { display: none; }
     .app-topbar  { display: none; }
-    .app-content { padding: 16px 14px 90px; }
-    .app-content.fullscreen-page { padding: 0; height: 100vh; }
+    /* 52px m-topbar + 16px top + 90px bottom nav clearance */
+    .app-content { padding: calc(52px + 16px) 14px calc(var(--bottomnav-h) + 24px + env(safe-area-inset-bottom)); }
+    .app-content.fullscreen-page { padding: 0; height: 100dvh; height: 100vh; }
     .m-topbar, .m-bottomnav { display: flex; }
     .hide-mobile { display: none !important; }
-    .modal-content { border-radius: var(--r-xl) var(--r-xl) 0 0; max-height: 88vh; }
+    .modal-content { border-radius: var(--r-xl) var(--r-xl) 0 0; max-height: 90dvh; }
     .modal-overlay { align-items: flex-end; padding: 0; }
+    /* bigger touch targets */
+    .action-btn { padding: 10px 12px; min-height: 44px; }
+    .bnav-item  { min-height: 44px; }
+    .topbar-btn { min-height: 44px; min-width: 44px; }
+    .drawer-item { padding: 16px 8px; min-height: 64px; }
+    /* toast on mobile goes top-center */
+    #toast-container { top: 60px; right: 12px; left: 12px; align-items: center; }
+    .toast { width: 100%; justify-content: center; }
 }
 @media (min-width: 769px) {
     .hide-desktop { display: none !important; }
+}
+
+/* iOS safe area bottom */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .m-bottomnav { bottom: calc(10px + env(safe-area-inset-bottom)); }
 }

@@ -18,8 +18,11 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
     let t = 0;
 
     function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x for perf
+      canvas.width  = window.innerWidth  * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width  = window.innerWidth  + 'px';
+      canvas.style.height = window.innerHeight + 'px';
       gl!.viewport(0, 0, canvas.width, canvas.height);
     }
     resize();
@@ -263,8 +266,12 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
       background: '#04040a',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden',
+      // use dvh so iOS toolbar doesn't clip content
+      height: '100dvh',
       opacity: phase === 'launching' ? 0 : 1,
       transition: phase === 'launching' ? 'opacity 1s ease' : 'none',
+      // prevent rubber-band scroll on iOS
+      touchAction: 'none',
     }}>
       {/* WebGL canvas */}
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
@@ -287,7 +294,7 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
 
         {/* logo */}
         <div style={{
-          fontFamily: 'var(--f-display)', fontSize: 'clamp(52px,10vw,96px)',
+          fontFamily: 'var(--f-display)', fontSize: 'clamp(48px,14vw,96px)',
           fontWeight: 900, letterSpacing: '-0.02em', textTransform: 'uppercase',
           lineHeight: 1,
           background: 'linear-gradient(135deg, #ff4500 0%, #ff7020 40%, #ffb300 70%, #ff4500 100%)',
@@ -297,21 +304,21 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
           transition: 'filter 0.1s',
         }}>MIDNIGHT</div>
         <div style={{
-          fontFamily: 'var(--f-display)', fontSize: 'clamp(14px,3vw,22px)',
+          fontFamily: 'var(--f-display)', fontSize: 'clamp(12px,4vw,22px)',
           fontWeight: 700, letterSpacing: '0.35em', textTransform: 'uppercase',
           color: '#00e5cc', opacity: 0.9,
-          marginBottom: '48px',
+          marginBottom: 'clamp(24px,5vh,48px)',
           textShadow: '0 0 20px rgba(0,229,204,0.6)',
         }}>CIRCUIT</div>
 
-        {/* RPM arc / speedometer */}
+        {/* RPM arc / speedometer — scales on mobile */}
         <RpmGauge rpm={rpm} />
 
-        <div style={{ height: '40px' }} />
+        <div style={{ height: 'clamp(16px,3vh,40px)' }} />
 
         {/* progress bar */}
         {phase === 'loading' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '260px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: 'min(260px, 80vw)' }}>
             <div style={{
               width: '100%', height: '2px',
               background: 'rgba(255,255,255,0.06)',
@@ -336,17 +343,20 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
           <button
             onClick={handleEnter}
             style={{
-              fontFamily: 'var(--f-display)', fontSize: '18px', fontWeight: 900,
+              fontFamily: 'var(--f-display)', fontSize: 'clamp(16px,5vw,20px)', fontWeight: 900,
               letterSpacing: '0.2em', textTransform: 'uppercase',
-              padding: '16px 48px',
+              padding: 'clamp(14px,4vw,18px) clamp(32px,10vw,56px)',
+              minHeight: '56px', // 44px+ touch target
               background: 'linear-gradient(135deg, #ff4500, #ff7020)',
               color: '#fff',
               border: 'none', borderRadius: '4px',
               cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
               boxShadow: '0 0 32px rgba(255,69,0,0.6), 0 0 80px rgba(255,69,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
               animation: 'pulse-btn 1.5s ease-in-out infinite',
               position: 'relative',
               overflow: 'hidden',
+              transition: 'transform 0.15s, box-shadow 0.15s',
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.boxShadow = '0 0 48px rgba(255,69,0,0.9), 0 0 100px rgba(255,69,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)';
@@ -358,6 +368,8 @@ export default function IntroScreen({ onEnter }: { onEnter: () => void }) {
               (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
               sceneRef.current?.setRpmVal(1);
             }}
+            onTouchStart={() => sceneRef.current?.setRpmVal(1.5)}
+            onTouchEnd={() => sceneRef.current?.setRpmVal(1)}
           >
             <span style={{ position: 'relative', zIndex: 1 }}>⚡ INICIAR CORRIDA</span>
             <div style={{
@@ -394,6 +406,7 @@ function RpmGauge({ rpm }: { rpm: number }) {
   const startA = Math.PI * 0.75, endA = Math.PI * 2.25;
   const sweep = endA - startA;
   const angle = startA + sweep * Math.min(rpm, 1);
+  // viewBox stays 220x160 but we scale it down on small screens via CSS
 
   function arc(fromA: number, toA: number, radius: number) {
     const x1 = cx + radius * Math.cos(fromA), y1 = cy + radius * Math.sin(fromA);
@@ -408,7 +421,7 @@ function RpmGauge({ rpm }: { rpm: number }) {
   const redline = rpm > 0.8;
 
   return (
-    <svg width="220" height="160" style={{ overflow: 'visible' }}>
+    <svg viewBox="0 0 220 160" style={{ overflow: 'visible', width: 'min(220px, 60vw)', height: 'auto' }}>
       {/* track */}
       <path d={arc(startA, endA, r)} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" strokeLinecap="round" />
       {/* fill */}

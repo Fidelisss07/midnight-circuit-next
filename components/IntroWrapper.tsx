@@ -19,15 +19,16 @@ export default function IntroWrapper({ children }: { children: React.ReactNode }
     setDone(true);
   }
 
-  if (!mounted) return null;
+  // before mount: show nothing (avoids SSR flash)
+  if (!mounted) return <div style={{ position: 'fixed', inset: 0, background: '#04040a' }} />;
 
   return (
     <>
       {!done && <IntroScreen onEnter={handleEnter} />}
       <div style={{
         opacity: done ? 1 : 0,
-        transition: 'opacity 0.6s ease 0.3s',
-        visibility: done ? 'visible' : 'hidden',
+        transition: done ? 'opacity 0.6s ease 0.3s' : 'none',
+        pointerEvents: done ? 'auto' : 'none',
       }}>
         {children}
       </div>
