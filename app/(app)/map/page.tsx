@@ -381,12 +381,8 @@ export default function MapPage() {
     const s = stateRef.current;
     const map = L.map(mapRef.current, { zoomControl: false, attributionControl: false }).setView([s.userLat, s.userLng], 14);
     mapInstance.current = map;
-    const ttKey = process.env.NEXT_PUBLIC_TOMTOM_API_KEY || '';
-    L.tileLayer(
-      `https://api.tomtom.com/map/1/tile/basic/night/{z}/{x}/{y}.png?key=${ttKey}&tileSize=256`,
-      { maxZoom: 22, attribution: '© TomTom' }
-    ).addTo(map);
-    L.control.attribution({ position: 'bottomleft', prefix: '© TomTom' }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+    L.control.attribution({ position: 'bottomleft', prefix: '© CartoDB · OSM' }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     loadSpots(); loadAlertas();
