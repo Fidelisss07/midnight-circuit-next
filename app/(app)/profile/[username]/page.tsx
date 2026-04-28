@@ -7,12 +7,12 @@ import { showToast } from '@/components/Toast';
 function getUser() { try { return JSON.parse(localStorage.getItem('usuario_logado') || 'null'); } catch { return null; } }
 
 export default function PublicProfilePage() {
-  const { email: rawEmail } = useParams();
-  const email = decodeURIComponent(rawEmail as string);
+  const { username } = useParams() as { username: string };
   const me = getUser();
   const router = useRouter();
 
   const [profile, setProfile] = useState<any>(null);
+  const [notFound, setNotFound] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [cars, setCars] = useState<any[]>([]);
   const [tab, setTab] = useState<'posts' | 'garage'>('posts');
@@ -20,21 +20,24 @@ export default function PublicProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
 
-  // redirect to own profile page if viewing yourself
   useEffect(() => {
-    if (me && me.email === email) { router.replace('/profile'); return; }
-    fetch(`/api/perfil/${encodeURIComponent(email)}`).then(r => r.json()).then(data => {
-      setProfile(data);
-      if (me) setFollowing((data.seguidores || []).includes(me.email));
-    });
-    fetch(`/api/posts?autor=${encodeURIComponent(email)}`).then(r => r.json()).then(setPosts);
-    fetch(`/api/garagem/${encodeURIComponent(email)}`).then(r => r.json()).then(setCars);
-  }, [email]);
+    fetch(`/api/perfil/username?u=${encodeURIComponent(username)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.erro) { setNotFound(true); return; }
+        // redirect to own profile if this is the logged-in user
+        if (me && me.email === data.email) { router.replace('/profile'); return; }
+        setProfile(data);
+        if (me) setFollowing((data.seguidores || []).includes(me.email));
+        fetch(`/api/posts?autor=${encodeURIComponent(data.email)}`).then(r => r.json()).then(setPosts);
+        fetch(`/api/garagem/${encodeURIComponent(data.email)}`).then(r => r.json()).then(setCars);
+      });
+  }, [username]);
 
   async function toggleFollow() {
     if (!me) { showToast('Faz login para seguir'); return; }
     setFollowLoading(true);
-    const res = await fetch('/api/seguir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eu: me.email, ele: email }) });
+    const res = await fetch('/api/seguir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eu: me.email, ele: profile.email }) });
     const data = await res.json();
     setFollowing(data.aSeguir);
     setProfile((p: any) => ({
@@ -43,21 +46,21 @@ export default function PublicProfilePage() {
         ? [...(p.seguidores || []), me.email]
         : (p.seguidores || []).filter((e: string) => e !== me.email),
     }));
-    showToast(data.aSeguir ? `A seguir ${profile?.nome}` : `Deixaste de seguir ${profile?.nome}`);
+    showToast(data.aSeguir ? `A seguir @${profile.username}` : `Deixaste de seguir @${profile.username}`);
     setFollowLoading(false);
   }
+
+  if (notFound) return (
+    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--t-dim)' }}>
+      <div style={{ fontSize: '36px', marginBottom: '12px' }}>🚫</div>
+      <div style={{ fontSize: '16px', fontWeight: 700 }}>@{username} não encontrado</div>
+    </div>
+  );
 
   if (!profile) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: '12px' }}>
       <div style={{ width: '36px', height: '36px', border: '3px solid var(--c-fire2)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-      <span style={{ fontSize: '12px', color: 'var(--t-dim)' }}>A carregar perfil...</span>
-    </div>
-  );
-
-  if (profile.erro) return (
-    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--t-dim)' }}>
-      <div style={{ fontSize: '36px', marginBottom: '12px' }}>🚫</div>
-      <div style={{ fontSize: '16px', fontWeight: 700 }}>Utilizador não encontrado</div>
+      <span style={{ fontSize: '12px', color: 'var(--t-dim)' }}>A carregar @{username}...</span>
     </div>
   );
 
@@ -67,39 +70,29 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-      {/* Back button */}
+      {/* Back */}
       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--t-mid)', fontSize: '13px', cursor: 'pointer', padding: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
         ← Voltar
       </button>
 
       {/* Cover */}
-      <div style={{ height: '200px', background: profile.capa ? `url('${profile.capa}') center/cover` : 'linear-gradient(135deg, #0a001a 0%, #1e003d 50%, #0a001a 100%)', borderRadius: 'var(--r-md)', position: 'relative', overflow: 'hidden', marginBottom: '0' }}>
+      <div style={{ height: '200px', background: profile.capa ? `url('${profile.capa}') center/cover` : 'linear-gradient(135deg, #0a001a 0%, #1e003d 50%, #0a001a 100%)', borderRadius: 'var(--r-md)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(4,4,10,0.85))' }} />
       </div>
 
       {/* Avatar + info + follow */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', marginTop: '-52px', marginBottom: '20px', padding: '0 16px' }}>
-        <img src={profile.avatar} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--c-fire2)', flexShrink: 0, display: 'block' }} alt=""
+        <img src={profile.avatar} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--c-fire2)', flexShrink: 0 }} alt=""
           onError={e => { (e.target as HTMLImageElement).src = avatarFallback(profile.nome || '?'); }} />
         <div style={{ flex: 1, paddingBottom: '4px' }}>
           <div style={{ fontFamily: 'var(--f-display)', fontSize: '22px', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1.1 }}>{profile.nome}</div>
-          <div style={{ fontSize: '12px', color: 'var(--t-mid)', margin: '4px 0 6px' }}>{profile.bio || ''}</div>
+          <div style={{ fontSize: '12px', color: 'var(--c-fire2)', fontWeight: 700, margin: '2px 0 4px' }}>@{profile.username}</div>
+          <div style={{ fontSize: '12px', color: 'var(--t-mid)', marginBottom: '6px' }}>{profile.bio || ''}</div>
           <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '99px', background: `${tier.color}22`, color: tier.color, border: `1px solid ${tier.color}55` }}>
             {tier.icon} {tier.label} · Nível {profile.nivel || 1}
           </span>
         </div>
-        <button
-          onClick={toggleFollow}
-          disabled={followLoading}
-          style={{
-            padding: '8px 18px', borderRadius: 'var(--r-sm)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginBottom: '4px', minHeight: '36px', minWidth: '90px',
-            background: following ? 'transparent' : 'var(--c-fire2)',
-            color: following ? 'var(--t-base)' : '#000',
-            border: following ? '1px solid var(--b-mid)' : 'none',
-            transition: 'all 0.15s',
-            opacity: followLoading ? 0.6 : 1,
-          }}
-        >
+        <button onClick={toggleFollow} disabled={followLoading} style={{ padding: '8px 18px', borderRadius: 'var(--r-sm)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginBottom: '4px', minHeight: '36px', minWidth: '90px', background: following ? 'transparent' : 'var(--c-fire2)', color: following ? 'var(--t-base)' : '#000', border: following ? '1px solid var(--b-mid)' : 'none', transition: 'all 0.15s', opacity: followLoading ? 0.6 : 1 }}>
           {followLoading ? '...' : following ? 'A Seguir' : 'Seguir'}
         </button>
       </div>
@@ -139,17 +132,13 @@ export default function PublicProfilePage() {
         ))}
       </div>
 
-      {/* Posts Grid */}
       {tab === 'posts' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
             {posts.map((p: any) => (
-              <div key={p.id} onClick={() => setSelectedPost(p)}
-                style={{ aspectRatio: '1', background: p.imagem_url ? `url('${p.imagem_url}') center/cover` : 'var(--bg-lift)', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
+              <div key={p.id} onClick={() => setSelectedPost(p)} style={{ aspectRatio: '1', background: p.imagem_url ? `url('${p.imagem_url}') center/cover` : 'var(--bg-lift)', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
                 {!p.imagem_url && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📝</div>}
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.35)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0)')} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.35)')} onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0)')} />
               </div>
             ))}
           </div>
@@ -162,16 +151,12 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* Garage (read-only) */}
       {tab === 'garage' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px,1fr))', gap: '16px' }}>
             {cars.map((c: any) => (
               <div key={c.id} className="card card-lift" style={{ overflow: 'hidden' }}>
-                {c.imagem_url
-                  ? <div style={{ height: '160px', background: `url('${c.imagem_url}') center/cover` }} />
-                  : <div style={{ height: '100px', background: 'var(--bg-lift)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🚗</div>
-                }
+                {c.imagem_url ? <div style={{ height: '160px', background: `url('${c.imagem_url}') center/cover` }} /> : <div style={{ height: '100px', background: 'var(--bg-lift)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🚗</div>}
                 <div style={{ padding: '14px' }}>
                   <div style={{ fontFamily: 'var(--f-display)', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase' }}>{c.marca} {c.modelo}</div>
                   <div style={{ fontSize: '11px', color: 'var(--t-dim)', marginBottom: '8px' }}>{c.ano}{c.cor ? ` · ${c.cor}` : ''}</div>
@@ -190,7 +175,6 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* Post modal */}
       {selectedPost && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setSelectedPost(null)}>
           <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--r-md)', maxWidth: '480px', width: '100%', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>

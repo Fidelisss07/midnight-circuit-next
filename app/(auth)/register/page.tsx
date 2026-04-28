@@ -1,28 +1,53 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmar: '' });
+  const [form, setForm] = useState({ nome: '', username: '', email: '', senha: '', confirmar: '' });
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'ok' | 'taken' | 'short'>('idle');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function set(k: string) { return (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value })); }
+
+  function handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+    setForm(f => ({ ...f, username: raw }));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (raw.length < 3) { setUsernameStatus(raw.length === 0 ? 'idle' : 'short'); return; }
+    setUsernameStatus('checking');
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/perfil/check-username?u=${encodeURIComponent(raw)}`);
+      const data = await res.json();
+      setUsernameStatus(data.available ? 'ok' : 'taken');
+    }, 500);
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (form.senha !== form.confirmar) { setErro('Palavras-passe não coincidem'); return; }
+    if (form.username.length < 3) { setErro('Username precisa de pelo menos 3 caracteres'); return; }
+    if (usernameStatus === 'taken') { setErro('Username já em uso'); return; }
     setLoading(true); setErro('');
     try {
-      const res = await fetch('/api/registro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: form.nome, email: form.email, senha: form.senha }) });
+      const res = await fetch('/api/registro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: form.nome, username: form.username, email: form.email, senha: form.senha }) });
       if (!res.ok) { const d = await res.json(); setErro(d.erro || 'Erro'); setLoading(false); return; }
       const user = await res.json();
       localStorage.setItem('usuario_logado', JSON.stringify(user));
       router.push('/feed');
     } catch { setErro('Erro de ligação'); setLoading(false); }
   }
+
+  const usernameHint = {
+    idle: null,
+    short: <span style={{ color: 'var(--t-dim)' }}>Mínimo 3 caracteres</span>,
+    checking: <span style={{ color: 'var(--t-dim)' }}>A verificar...</span>,
+    ok: <span style={{ color: '#22c55e' }}>✓ Disponível</span>,
+    taken: <span style={{ color: '#ef4444' }}>✗ Já em uso</span>,
+  }[usernameStatus];
 
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative', zIndex: 1 }}>
@@ -38,6 +63,15 @@ export default function RegisterPage() {
               <span className="material-symbols-outlined input-icon-left">person</span>
               <input className="input" style={{ paddingLeft: '40px' }} type="text" placeholder="O teu nome de piloto" value={form.nome} onChange={set('nome')} required />
             </div>
+
+            <div>
+              <div className="input-group">
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-fire2)', fontWeight: 700, fontSize: '15px', pointerEvents: 'none' }}>@</span>
+                <input className="input" style={{ paddingLeft: '28px' }} type="text" placeholder="username" value={form.username} onChange={handleUsernameChange} required maxLength={20} autoComplete="off" />
+              </div>
+              {usernameHint && <div style={{ fontSize: '11px', marginTop: '4px', paddingLeft: '4px' }}>{usernameHint}</div>}
+            </div>
+
             <div className="input-group">
               <span className="material-symbols-outlined input-icon-left">alternate_email</span>
               <input className="input" style={{ paddingLeft: '40px' }} type="email" placeholder="Email" value={form.email} onChange={set('email')} required />
@@ -51,7 +85,7 @@ export default function RegisterPage() {
               <input className="input" style={{ paddingLeft: '40px' }} type="password" placeholder="Confirmar palavra-passe" value={form.confirmar} onChange={set('confirmar')} required />
             </div>
             {erro && <div style={{ color: '#ef4444', fontSize: '12px', textAlign: 'center' }}>{erro}</div>}
-            <button type="submit" className="btn-race" style={{ width: '100%', justifyContent: 'center', marginTop: '4px' }} disabled={loading}>
+            <button type="submit" className="btn-race" style={{ width: '100%', justifyContent: 'center', marginTop: '4px' }} disabled={loading || usernameStatus === 'taken' || usernameStatus === 'checking'}>
               {loading ? <span className="material-symbols-outlined" style={{ animation: 'spin 1s linear infinite' }}>progress_activity</span> : <><span className="material-symbols-outlined">rocket_launch</span> Criar Conta</>}
             </button>
           </form>
