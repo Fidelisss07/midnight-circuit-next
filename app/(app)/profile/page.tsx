@@ -205,7 +205,7 @@ export default function ProfilePage() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,112,32,0.3)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,112,32,0.05)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}>
             <div style={{ fontFamily: 'var(--f-display)', fontSize: '24px', fontWeight: 900, color: 'var(--c-fire2)', lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontFamily: 'var(--f-mono)', fontSize: '9px', color: 'var(--t-dim)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</div>
+            <div style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', color: 'var(--t-mid)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -266,7 +266,7 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,112,32,0.05)' }}>
                 <div>
                   <div style={{ fontFamily: 'var(--f-display)', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Novo Carro</div>
-                  <div style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', color: 'var(--t-dim)', marginTop: '2px', letterSpacing: '0.1em' }}>ESPECIFICAÇÕES DO VEÍCULO</div>
+                  <div style={{ fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--t-mid)', marginTop: '2px', letterSpacing: '0.08em' }}>Especificações do veículo</div>
                 </div>
                 <button onClick={() => setShowAddCar(false)} style={{ width: '32px', height: '32px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', color: 'var(--t-mid)', transition: 'all 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
@@ -282,7 +282,7 @@ export default function ProfilePage() {
                 {!carImgPreview && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <IconCamera />
-                    <span style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', color: 'var(--t-dim)', letterSpacing: '0.1em' }}>FOTO DO CARRO</span>
+                    <span style={{ fontFamily: 'var(--f-mono)', fontSize: '12px', color: 'var(--t-mid)', letterSpacing: '0.08em' }}>Foto do carro</span>
                   </div>
                 )}
                 {carImgPreview && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => (e.currentTarget.style.opacity = '1')} onMouseLeave={e => (e.currentTarget.style.opacity = '0')}><span style={{ fontFamily: 'var(--f-mono)', fontSize: '10px', letterSpacing: '0.1em' }}>TROCAR FOTO</span></div>}
@@ -291,10 +291,10 @@ export default function ProfilePage() {
 
               <div style={{ padding: '20px' }}>
                 {/* Section: Identificação */}
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '9px', color: 'var(--c-fire2)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--t-mid)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                   IDENTIFICAÇÃO
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
                   {[
@@ -308,10 +308,10 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Section: Motor */}
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '9px', color: 'var(--c-fire2)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--t-mid)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                   MOTOR & PERFORMANCE
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                   <input className="input" placeholder="Motor (ex: 2.0T)" value={carForm.motor} onChange={setField('motor')} style={{ fontSize: '13px' }} />
@@ -327,10 +327,10 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Section: Transmissão */}
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '9px', color: 'var(--c-fire2)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--t-mid)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                   TRANSMISSÃO & TRAÇÃO
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
                   <Select value={carForm.transmissao} onChange={setSelect('transmissao')} options={TRANSMISSAO} placeholder="Transmissão" />
@@ -339,10 +339,10 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Section: Extras */}
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '9px', color: 'var(--c-fire2)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                <div style={{ fontFamily: 'var(--f-mono)', fontSize: '11px', color: 'var(--t-mid)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                   EXTRAS / UPGRADES
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,112,32,0.2)' }} />
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
                   <Toggle label="Turbo" checked={carForm.turbo} onChange={() => toggleFlag('turbo')} />
