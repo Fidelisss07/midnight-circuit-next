@@ -1,41 +1,50 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { timeAgo, formatNumber, avatarFallback, getTier } from '@/lib/utils';
 import { showToast } from '@/components/Toast';
 
 function getUser() { try { return JSON.parse(localStorage.getItem('usuario_logado') || 'null'); } catch { return null; } }
 
-export default function ProfilePage() {
-  const user = getUser();
+export default function PublicProfilePage() {
+  const { email: rawEmail } = useParams();
+  const email = decodeURIComponent(rawEmail as string);
+  const me = getUser();
   const router = useRouter();
+
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [cars, setCars] = useState<any[]>([]);
   const [tab, setTab] = useState<'posts' | 'garage'>('posts');
-  const [showAddCar, setShowAddCar] = useState(false);
-  const [carForm, setCarForm] = useState({ marca: '', modelo: '', ano: '', cor: '', cv: '', descricao: '' });
-  const [carImg, setCarImg] = useState<File | null>(null);
+  const [following, setFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
 
+  // redirect to own profile page if viewing yourself
   useEffect(() => {
-    if (!user) { router.replace('/login'); return; }
-    fetch(`/api/perfil/${encodeURIComponent(user.email)}`).then(r => r.json()).then(setProfile);
-    fetch(`/api/posts?autor=${encodeURIComponent(user.email)}`).then(r => r.json()).then(setPosts);
-    fetch(`/api/garagem/${encodeURIComponent(user.email)}`).then(r => r.json()).then(setCars);
-  }, []);
+    if (me && me.email === email) { router.replace('/profile'); return; }
+    fetch(`/api/perfil/${encodeURIComponent(email)}`).then(r => r.json()).then(data => {
+      setProfile(data);
+      if (me) setFollowing((data.seguidores || []).includes(me.email));
+    });
+    fetch(`/api/posts?autor=${encodeURIComponent(email)}`).then(r => r.json()).then(setPosts);
+    fetch(`/api/garagem/${encodeURIComponent(email)}`).then(r => r.json()).then(setCars);
+  }, [email]);
 
-  async function addCar() {
-    const fd = new FormData();
-    Object.entries(carForm).forEach(([k, v]) => fd.append(k, v as string));
-    fd.append('email', user.email);
-    if (carImg) fd.append('imagem', carImg);
-    await fetch('/api/garagem', { method: 'POST', body: fd });
-    showToast('Carro adicionado!');
-    setShowAddCar(false);
-    setCarForm({ marca: '', modelo: '', ano: '', cor: '', cv: '', descricao: '' });
-    setCarImg(null);
-    fetch(`/api/garagem/${encodeURIComponent(user.email)}`).then(r => r.json()).then(setCars);
+  async function toggleFollow() {
+    if (!me) { showToast('Faz login para seguir'); return; }
+    setFollowLoading(true);
+    const res = await fetch('/api/seguir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eu: me.email, ele: email }) });
+    const data = await res.json();
+    setFollowing(data.aSeguir);
+    setProfile((p: any) => ({
+      ...p,
+      seguidores: data.aSeguir
+        ? [...(p.seguidores || []), me.email]
+        : (p.seguidores || []).filter((e: string) => e !== me.email),
+    }));
+    showToast(data.aSeguir ? `A seguir ${profile?.nome}` : `Deixaste de seguir ${profile?.nome}`);
+    setFollowLoading(false);
   }
 
   if (!profile) return (
@@ -45,46 +54,64 @@ export default function ProfilePage() {
     </div>
   );
 
+  if (profile.erro) return (
+    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--t-dim)' }}>
+      <div style={{ fontSize: '36px', marginBottom: '12px' }}>🚫</div>
+      <div style={{ fontSize: '16px', fontWeight: 700 }}>Utilizador não encontrado</div>
+    </div>
+  );
+
   const tier = getTier(profile.nivel || 1);
   const xpToNext = (profile.nivel || 1) * 500;
   const xpPct = Math.min(100, ((profile.xp || 0) % xpToNext) / xpToNext * 100);
 
   return (
     <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+      {/* Back button */}
+      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--t-mid)', fontSize: '13px', cursor: 'pointer', padding: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        ← Voltar
+      </button>
+
       {/* Cover */}
-      <div style={{ height: '200px', background: profile.capa ? `url('${profile.capa}') center/cover` : 'linear-gradient(135deg, #1a0a00 0%, #3d1100 50%, #1a0a00 100%)', borderRadius: 'var(--r-md)', position: 'relative', overflow: 'hidden', marginBottom: '0' }}>
+      <div style={{ height: '200px', background: profile.capa ? `url('${profile.capa}') center/cover` : 'linear-gradient(135deg, #0a001a 0%, #1e003d 50%, #0a001a 100%)', borderRadius: 'var(--r-md)', position: 'relative', overflow: 'hidden', marginBottom: '0' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(4,4,10,0.85))' }} />
-        <div style={{ position: 'absolute', bottom: '14px', right: '14px' }}>
-          <button className="btn btn-ghost" style={{ fontSize: '11px', padding: '6px 14px', backdropFilter: 'blur(8px)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.15)' }} onClick={() => router.push('/settings')}>
-            ✏️ Editar Perfil
-          </button>
-        </div>
       </div>
 
-      {/* Avatar + info */}
+      {/* Avatar + info + follow */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', marginTop: '-52px', marginBottom: '20px', padding: '0 16px' }}>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <img src={profile.avatar} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--c-fire2)', display: 'block' }} alt=""
-            onError={e => { (e.target as HTMLImageElement).src = avatarFallback(profile.nome || '?'); }} />
-          <span style={{ position: 'absolute', bottom: '2px', right: '2px', width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', border: '2px solid var(--bg-base)' }} title="Online" />
-        </div>
+        <img src={profile.avatar} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--c-fire2)', flexShrink: 0, display: 'block' }} alt=""
+          onError={e => { (e.target as HTMLImageElement).src = avatarFallback(profile.nome || '?'); }} />
         <div style={{ flex: 1, paddingBottom: '4px' }}>
           <div style={{ fontFamily: 'var(--f-display)', fontSize: '22px', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1.1 }}>{profile.nome}</div>
-          <div style={{ fontSize: '12px', color: 'var(--t-mid)', margin: '4px 0 6px' }}>{profile.bio || 'Sem bio ainda'}</div>
+          <div style={{ fontSize: '12px', color: 'var(--t-mid)', margin: '4px 0 6px' }}>{profile.bio || ''}</div>
           <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '99px', background: `${tier.color}22`, color: tier.color, border: `1px solid ${tier.color}55` }}>
             {tier.icon} {tier.label} · Nível {profile.nivel || 1}
           </span>
         </div>
+        <button
+          onClick={toggleFollow}
+          disabled={followLoading}
+          style={{
+            padding: '8px 18px', borderRadius: 'var(--r-sm)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginBottom: '4px', minHeight: '36px', minWidth: '90px',
+            background: following ? 'transparent' : 'var(--c-fire2)',
+            color: following ? 'var(--t-base)' : '#000',
+            border: following ? '1px solid var(--b-mid)' : 'none',
+            transition: 'all 0.15s',
+            opacity: followLoading ? 0.6 : 1,
+          }}
+        >
+          {followLoading ? '...' : following ? 'A Seguir' : 'Seguir'}
+        </button>
       </div>
 
       {/* XP Bar */}
       <div style={{ padding: '0 16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--t-dim)', marginBottom: '6px' }}>
           <span style={{ fontWeight: 700, color: 'var(--c-fire2)' }}>{formatNumber(profile.xp || 0)} XP</span>
-          <span>Próximo nível: {formatNumber(xpToNext)} XP</span>
+          <span>Nível {profile.nivel || 1}</span>
         </div>
-        <div style={{ height: '5px', background: 'var(--b-dim)', borderRadius: '99px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${xpPct}%`, background: 'linear-gradient(90deg, var(--c-fire), var(--c-fire2))', borderRadius: '99px', transition: 'width 0.8s ease', boxShadow: '0 0 8px var(--c-fire2)' }} />
+        <div style={{ height: '4px', background: 'var(--b-dim)', borderRadius: '99px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${xpPct}%`, background: 'linear-gradient(90deg, var(--c-fire), var(--c-fire2))', borderRadius: '99px', transition: 'width 0.8s ease' }} />
         </div>
       </div>
 
@@ -96,7 +123,7 @@ export default function ProfilePage() {
           { label: 'Seguindo', value: formatNumber((profile.seguindo || []).length) },
           { label: 'Carros', value: formatNumber(cars.length) },
         ].map(s => (
-          <div key={s.label} className="card" style={{ padding: '14px 8px', textAlign: 'center', cursor: 'default' }}>
+          <div key={s.label} className="card" style={{ padding: '14px 8px', textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--f-display)', fontSize: '22px', fontWeight: 900, color: 'var(--c-fire2)', lineHeight: 1 }}>{s.value}</div>
             <div style={{ fontSize: '10px', color: 'var(--t-dim)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
           </div>
@@ -130,41 +157,14 @@ export default function ProfilePage() {
             <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--t-dim)' }}>
               <div style={{ fontSize: '36px', marginBottom: '10px' }}>📸</div>
               <div style={{ fontSize: '14px', fontWeight: 700 }}>Ainda sem posts</div>
-              <div style={{ fontSize: '12px', marginTop: '4px' }}>Partilha o teu primeiro momento</div>
             </div>
           )}
         </div>
       )}
 
-      {/* Garage */}
+      {/* Garage (read-only) */}
       {tab === 'garage' && (
         <div style={{ padding: '0 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-            <button className="btn btn-primary" style={{ fontSize: '11px' }} onClick={() => setShowAddCar(true)}>+ Adicionar Carro</button>
-          </div>
-
-          {showAddCar && (
-            <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
-              <h3 style={{ fontFamily: 'var(--f-display)', fontSize: '14px', fontWeight: 800, textTransform: 'uppercase', marginBottom: '14px' }}>Novo Carro</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <input className="input" placeholder="Marca" value={carForm.marca} onChange={e => setCarForm(f => ({ ...f, marca: e.target.value }))} />
-                <input className="input" placeholder="Modelo" value={carForm.modelo} onChange={e => setCarForm(f => ({ ...f, modelo: e.target.value }))} />
-                <input className="input" placeholder="Ano" value={carForm.ano} onChange={e => setCarForm(f => ({ ...f, ano: e.target.value }))} />
-                <input className="input" placeholder="Cor" value={carForm.cor} onChange={e => setCarForm(f => ({ ...f, cor: e.target.value }))} />
-                <input className="input" placeholder="CV / BHP" value={carForm.cv} onChange={e => setCarForm(f => ({ ...f, cv: e.target.value }))} />
-                <textarea className="input" style={{ gridColumn: '1/-1', resize: 'none', minHeight: '70px' }} placeholder="Descrição / mods" value={carForm.descricao} onChange={e => setCarForm(f => ({ ...f, descricao: e.target.value }))} />
-                <label style={{ gridColumn: '1/-1', border: '1px dashed var(--b-mid)', borderRadius: 'var(--r-sm)', padding: '12px', cursor: 'pointer', fontSize: '12px', color: 'var(--t-mid)', textAlign: 'center' }}>
-                  {carImg ? `✅ ${carImg.name}` : '📷 Foto do carro (opcional)'}
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setCarImg(e.target.files?.[0] || null)} />
-                </label>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                <button className="btn btn-primary" onClick={addCar}>Guardar</button>
-                <button className="btn btn-ghost" onClick={() => { setShowAddCar(false); setCarForm({ marca: '', modelo: '', ano: '', cor: '', cv: '', descricao: '' }); setCarImg(null); }}>Cancelar</button>
-              </div>
-            </div>
-          )}
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px,1fr))', gap: '16px' }}>
             {cars.map((c: any) => (
               <div key={c.id} className="card card-lift" style={{ overflow: 'hidden' }}>
@@ -184,7 +184,6 @@ export default function ProfilePage() {
               <div style={{ gridColumn: '1/-1', padding: '60px 0', textAlign: 'center', color: 'var(--t-dim)' }}>
                 <div style={{ fontSize: '36px', marginBottom: '10px' }}>🚗</div>
                 <div style={{ fontSize: '14px', fontWeight: 700 }}>Garagem vazia</div>
-                <div style={{ fontSize: '12px', marginTop: '4px' }}>Adiciona o teu primeiro carro</div>
               </div>
             )}
           </div>
